@@ -1,0 +1,14 @@
+{
+  "name": "ttt-socket",
+  "module": "index.js",
+  "type": "module",
+  "devDependencies": {
+    "bun-types": "^1.0.19"
+  },
+  "scripts": {
+    "start": "bun run index.js"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
