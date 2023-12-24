@@ -31,6 +31,14 @@ const server = Bun.serve({
       if (result) {
         gameState = result.board
         currentTurn = result.turn
+        if (result.winner || result.isDraw) {
+          gameState = [
+            ["", "", ""],
+            ["", "", ""],
+            ["", "", ""],
+          ]
+          currentTurn = "X"
+        }
         ws.publish("game", JSON.stringify({ status: "update", ...result }))
         ws.send(JSON.stringify({ status: "update", ...result }))
       } else {
