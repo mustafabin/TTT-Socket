@@ -1,11 +1,6 @@
-import playMove from "./game"
-let gameState = [
-  ["", "", ""],
-  ["", "", ""],
-  ["", "", ""],
-]
-let currentTurn = "X"
-let playerConnections = new Map()
+import NormalRoom from "./game"
+
+const room = new NormalRoom()
 const server = Bun.serve({
   port: 3030,
   fetch(request) {
@@ -25,20 +20,11 @@ const server = Bun.serve({
       let playerData = JSON.parse(data)
       let [row, col] = playerData.coords
       let { player } = playerData
-      if (player !== currentTurn) return ws.send(JSON.stringify({ status: "error", error: "Not your turn" }))
+      if (player !== room.currentTurn) return ws.send(JSON.stringify({ status: "error", error: "Not your turn" }))
 
-      let result = playMove(gameState, row, col, player)
+      let result = room.playMove(row, col, player)
       if (result) {
-        gameState = result.board
-        currentTurn = result.turn
-        if (result.winner || result.isDraw) {
-          gameState = [
-            ["", "", ""],
-            ["", "", ""],
-            ["", "", ""],
-          ]
-          currentTurn = "X"
-        }
+        if (result.winner || result.isDraw) room.clearBoard()
         ws.publish("game", JSON.stringify({ status: "update", ...result }))
         ws.send(JSON.stringify({ status: "update", ...result }))
       } else {
@@ -46,16 +32,15 @@ const server = Bun.serve({
       }
     },
     close(ws, code, message) {
-      playerConnections.delete(ws)
       ws.unsubscribe("game")
+      room.removePlayer(ws)
       console.log(`Socket closed - code: ${code} message: ${message}`)
     },
     open(ws) {
       console.log(`Socket opened`)
-      let player = playerConnections.size === 0 ? "X" : "O"
-      playerConnections.set(ws, player)
       ws.subscribe("game")
-
+      let player = room.assignPlayer(ws)
+      if (!player) return ws.send(JSON.stringify({ status: "error", error: "Couldnt Connect to room" }))
       ws.send(JSON.stringify({ status: "connected", player }))
     },
   },
