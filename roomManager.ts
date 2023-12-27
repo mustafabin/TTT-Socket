@@ -23,6 +23,9 @@ export default class RoomManager {
 
     return attempts < 10 ? result : null
   }
+  allRooms = () => {
+    return Array.from(this.roomIDs)
+  }
   createNewRoom = (roomType: roomTypes) => {
     let generatedID = this.generateRoomId()
     if (!generatedID) return false

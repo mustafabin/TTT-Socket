@@ -15,35 +15,37 @@ const server = Bun.serve({
       let roomID = url.searchParams.get("room")
       if (!roomID) return new Response("No room ID provided", { status: 400 })
       if (roomManager.getRoom(roomID) === undefined) return JSONResponse({ error: "Room not found" }, 404)
-      const success = server.upgrade(request, { roomID })
+      const success = server.upgrade(request, { data: { roomID } })
       if (!success) return JSONResponse({ error: "Couldnt upgrade connection" }, 500)
       return undefined
     }
-
+    if (url.pathname === "/all") {
+      return JSONResponse({ rooms: roomManager.allRooms() }, 200)
+    }
     return JSONResponse({ error: "Invalid path" }, 404)
   },
   websocket: {
     // ! Main websocket logic
     message(ws, data) {
-      console.log("Message received")
-      // let parsedData = JSON.parse(data)
-      // if (parsedData.type === "normal") return handleNormalGame(ws, parsedData)
+      let roomID = JSON.stringify(ws.data.roomID)
+      console.log("Message received from room", ws.data.roomID)
+      ws.publish(roomID, "hello")
     },
     // ! End of main websocket logic
     close(ws, code, message) {
-      ws.unsubscribe("game")
-      room.removePlayer(ws)
+      let roomID = JSON.stringify(ws.data.roomID)
+      ws.publish(roomID, JSON.stringify({ status: "user disconnected" }))
+      ws.unsubscribe(roomID)
       console.log(`Socket closed - code: ${code} message: ${message}`)
     },
     open(ws) {
-      console.log(`Socket opened`)
-      ws.subscribe("game")
-      let player = room.assignPlayer(ws)
-      if (!player) return ws.send(JSON.stringify({ status: "error", error: "Couldnt Connect to room" }))
-      ws.send(JSON.stringify({ status: "connected", player }))
+      let roomID = JSON.stringify(ws.data.roomID)
+      console.log(`Socket opened: ${roomID}`)
+      ws.subscribe(roomID)
+      ws.publish(roomID, JSON.stringify({ status: "user connected" }))
+      ws.send(JSON.stringify({ status: "connected" }))
     },
   },
-  error() {},
 })
 
 function JSONResponse(data, status) {
