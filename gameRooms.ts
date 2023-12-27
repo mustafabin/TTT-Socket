@@ -1,4 +1,13 @@
+import { ServerWebSocket } from "bun"
+
+type Player = "X" | "O"
+type GameState = string[][]
+type Coords = [number, number]
+
 class NormalRoom {
+  gameState: GameState
+  currentTurn: Player
+  playerConnections: Map<ServerWebSocket<any>, Player>
   constructor() {
     ;(this.gameState = [
       ["", "", ""],
@@ -8,10 +17,10 @@ class NormalRoom {
       (this.currentTurn = "X"),
       (this.playerConnections = new Map())
   }
-  checkDraw = (board) => {
+  checkDraw = (board: GameState) => {
     return board.every((row) => row.every((cell) => cell !== ""))
   }
-  checkWinner = (currentMove) => {
+  checkWinner = (currentMove: Coords) => {
     let [currentRow, currentCol] = currentMove
 
     // check rows and columns
@@ -25,10 +34,10 @@ class NormalRoom {
     // no winner
     return ""
   }
-  playMove = (row, col, player) => {
+  playMove = (row: number, col: number, player: Player) => {
     if (this.gameState[row][col] === "") {
       this.gameState[row][col] = player
-      let currentWinner = this.checkWinner([row, col], player)
+      let currentWinner = this.checkWinner([row, col])
       this.currentTurn = this.currentTurn === "X" ? "O" : "X"
       return { winner: currentWinner, board: this.gameState, isDraw: this.checkDraw(this.gameState), turn: this.currentTurn }
     } else {
@@ -43,7 +52,7 @@ class NormalRoom {
     ]),
       (this.currentTurn = "X")
   }
-  assignPlayer(ws) {
+  assignPlayer(ws: ServerWebSocket<any>) {
     if (!ws) {
       // throw error since no ws
       return false
@@ -70,9 +79,9 @@ class NormalRoom {
     }
     return false
   }
-  removePlayer(ws) {
+  removePlayer(ws: ServerWebSocket<any>) {
     this.playerConnections.delete(ws)
   }
 }
-
-export default NormalRoom
+class HardRoom {}
+export { NormalRoom, HardRoom }
