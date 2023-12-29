@@ -1,6 +1,6 @@
 import { ServerWebSocket } from "bun"
 import { HardRoom, NormalRoom } from "./gameRooms"
-type roomTypes = "normal" | "hard"
+import { roomTypes } from "./types"
 export default class RoomManager {
   private rooms: Map<string, NormalRoom | HardRoom>
   private roomIDs: Set<string>
@@ -24,10 +24,10 @@ export default class RoomManager {
 
     return attempts < 10 ? result : null
   }
-  allRooms = () => {
+  allRooms() {
     return Array.from(this.roomIDs)
   }
-  createNewRoom = (roomType: roomTypes) => {
+  createNewRoom(roomType: roomTypes) {
     let generatedID = this.generateRoomId()
     if (!generatedID) return false
     // ? in the future if more i make more room types seperate the logic
@@ -36,21 +36,21 @@ export default class RoomManager {
     this.rooms.set(generatedID, room)
     return generatedID
   }
-  getRoom = (roomID: string) => {
+  getRoom(roomID: string) {
     return this.rooms.get(roomID)
   }
-  removeRoom = (roomID: string) => {
+  removeRoom(roomID: string) {
     this.rooms.delete(roomID)
     this.roomIDs.delete(roomID)
   }
-  assignPlayer = (ws:ServerWebSocket<any>, roomID:string)=>{
+  assignPlayer(ws: ServerWebSocket<any>, roomID: string) {
     let currentRoom = this.getRoom(roomID)
-    if(!currentRoom) return false
+    if (!currentRoom) return false
     return currentRoom.assignPlayer(ws)
   }
-  removePlayer = (ws:ServerWebSocket<any>, roomID:string)=>{
+  removePlayer(ws: ServerWebSocket<any>, roomID: string) {
     let currentRoom = this.getRoom(roomID)
-    if(!currentRoom) return false
+    if (!currentRoom) return false
     currentRoom.removePlayer(ws)
     // todo in the future if the room is empty remove it
   }

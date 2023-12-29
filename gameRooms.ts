@@ -1,24 +1,13 @@
 import { ServerWebSocket } from "bun"
+import { Coords, GameState, Player, ResultType } from "./types"
 
-type Player = "X" | "O"
-type GameState = string[][]
-type HardGameState = string[][][]
-type Coords = [number, number]
-type ResultType = {
-  status: string
-  error: string
-  winner: string
-  board: GameState
-  isDraw: boolean
-  player: Player | undefined
-  currentTurn: Player
-}
 class NormalRoom {
   private gameState: GameState
   private currentTurn: Player
   private playerConnections: Map<ServerWebSocket<any>, Player>
   private winner: Player | ""
   private isDraw: boolean
+  private result:ResultType
   constructor() {
     this.gameState = [
       ["", "", ""],
@@ -29,11 +18,20 @@ class NormalRoom {
     this.playerConnections = new Map()
     this.winner = ""
     this.isDraw = false
+    this.result = {
+      status: "",
+      error: "",
+      winner: this.winner,
+      board: this.gameState,
+      isDraw: this.isDraw,
+      currentTurn: this.currentTurn,
+      player: undefined,
+    }
   }
-  private checkDraw = () => {
+  private checkDraw () {
     this.isDraw = this.gameState.every((row) => row.every((cell) => cell !== ""))
   }
-  private checkWinner = (currentMove: Coords) => {
+  private checkWinner (currentMove: Coords) {
     let [currentRow, currentCol] = currentMove
 
     // check rows and columns
@@ -48,25 +46,15 @@ class NormalRoom {
     this.currentTurn = this.currentTurn === "X" ? "O" : "X"
     this.checkDraw()
   }
-  playMove = (row: number, col: number, ws: ServerWebSocket<any>): ResultType=> {
+  playMove (row: number, col: number, ws: ServerWebSocket<any>): ResultType {
     let player = this.playerConnections.get(ws)
-    let result: ResultType = {
-      status: "error",
-      error: "Invalid Move",
-      winner: this.winner,
-      board: this.gameState,
-      isDraw: this.isDraw,
-      currentTurn: this.currentTurn,
-      player,
-    }
-    // ! if any of these conditions dont pass return error
-    if (!(player !== undefined && player === this.currentTurn && this.gameState[row][col] === "")) return result
-    result.error = ""
+    if (!(player !== undefined && player === this.currentTurn && this.gameState[row][col] === "")) return {...this.result, status:"error", error:"Invalid Move"}
     this.gameState[row][col] = player
     this.checkWinner([row, col])
-    return { ...result, status: "success" }
+    this.result.status = "success"
+    return this.result
   }
-  clearBoard = () => {
+  clearBoard () {
     this.gameState = [
       ["", "", ""],
       ["", "", ""],
