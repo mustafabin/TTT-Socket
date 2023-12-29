@@ -27,23 +27,33 @@ const server = Bun.serve({
   websocket: {
     // ! Main websocket logic
     message(ws, data) {
-      let roomID = JSON.stringify(ws.data.roomID)
-      console.log("Message received from room", ws.data.roomID)
-      ws.publish(roomID, "hello")
+      let roomID = String(ws.data.roomID)
+      let coords = JSON.parse(data)?.coords
+      console.log(`Message received: ${coords} Room: ${roomID}`)
+      let currentRoom = roomManager.getRoom(roomID)
+      if(!currentRoom) return
+      let result = currentRoom.playMove(coords[0], coords[1], ws)
+      let stringifiedResult = JSON.stringify(result)
+      result.error ? ws.send(stringifiedResult) : ws.publish(roomID,stringifiedResult)
     },
     // ! End of main websocket logic
     close(ws, code, message) {
-      let roomID = JSON.stringify(ws.data.roomID)
+      let roomID = String(ws.data.roomID)
+      // ! disconnect player from room
+      roomManager.removePlayer(ws, roomID)
       ws.publish(roomID, JSON.stringify({ status: "user disconnected" }))
       ws.unsubscribe(roomID)
       console.log(`Socket closed - code: ${code} message: ${message}`)
     },
     open(ws) {
-      let roomID = JSON.stringify(ws.data.roomID)
+      let roomID = String(ws.data.roomID)
       console.log(`Socket opened: ${roomID}`)
+      // ! connect player to room
+      let player = roomManager.assignPlayer(ws, roomID)
+      let response = JSON.stringify({ status: "joined", player })
       ws.subscribe(roomID)
-      ws.publish(roomID, JSON.stringify({ status: "user connected" }))
-      ws.send(JSON.stringify({ status: "connected" }))
+      ws.publish(roomID, response)
+      ws.send(response)
     },
   },
 })

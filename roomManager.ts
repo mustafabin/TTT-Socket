@@ -1,3 +1,4 @@
+import { ServerWebSocket } from "bun"
 import { HardRoom, NormalRoom } from "./gameRooms"
 type roomTypes = "normal" | "hard"
 export default class RoomManager {
@@ -41,5 +42,16 @@ export default class RoomManager {
   removeRoom = (roomID: string) => {
     this.rooms.delete(roomID)
     this.roomIDs.delete(roomID)
+  }
+  assignPlayer = (ws:ServerWebSocket<any>, roomID:string)=>{
+    let currentRoom = this.getRoom(roomID)
+    if(!currentRoom) return false
+    return currentRoom.assignPlayer(ws)
+  }
+  removePlayer = (ws:ServerWebSocket<any>, roomID:string)=>{
+    let currentRoom = this.getRoom(roomID)
+    if(!currentRoom) return false
+    currentRoom.removePlayer(ws)
+    // todo in the future if the room is empty remove it
   }
 }
