@@ -8,8 +8,9 @@
     "typescript": "^5.0.0"
   },
   "scripts": {
-    "start": "bun index.js",
-    "dev": "bun --hot index.js"
+    "start": "bun index.ts",
+    "dev": "bun --hot index.ts",
+    "build": "bun build index.ts"
   },
   "type": "module"
 }
