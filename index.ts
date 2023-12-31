@@ -50,7 +50,7 @@ const server = Bun.serve({
     },
   },
 })
-function handleGameMessage(ws: ServerWebSocket<any>, roomID: string, actionType: string, data:any) {
+function handleGameMessage(ws: ServerWebSocket<any>, roomID: string, actionType: string, data: any) {
   let currentRoom = roomManager.getRoom(roomID)
   if (!currentRoom) return ws.send(JSON.stringify({ status: "error", error: "Room not found" }))
   switch (actionType) {
@@ -79,10 +79,12 @@ function handleRequest(request: Request) {
       if (roomID === false) return JSONResponse({ error: "Couldnt create room" }, 500)
       return JSONResponse({ roomID }, 200)
     case "/join":
+      console.log("attempting to upgrade connection")
       roomID = url.searchParams.get("room") || false
       if (!roomID) return new Response("No room ID provided", { status: 400 })
       if (roomManager.getRoom(roomID) === undefined) return JSONResponse({ error: "Room not found" }, 404)
       const success = server.upgrade(request, { data: { roomID } })
+      console.log("upgraded connection: ", success)
       if (!success) return JSONResponse({ error: "Couldnt upgrade connection" }, 500)
       return undefined
     case "/all":
@@ -101,6 +103,9 @@ function publishToRoom(ws: ServerWebSocket<any>, roomID: string, data: ResultTyp
   }
 }
 function JSONResponse(data: Object, status: number) {
-  return new Response(JSON.stringify(data), { status })
+  const res = new Response(JSON.stringify(data), { status })
+  res.headers.set("Access-Control-Allow-Origin", "*")
+  res.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+  return res
 }
 console.log(`Listenin on localhost:${server.port}`)
