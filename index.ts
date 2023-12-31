@@ -62,8 +62,7 @@ function handleGameMessage(ws: ServerWebSocket<any>, roomID: string, actionType:
       break
     case "reset":
       console.log(`reset requested from room: ${roomID}}`)
-      let resetResult = currentRoom.resetGame()
-      publishToRoom(ws, roomID, resetResult)
+      currentRoom.resetGame()
       break
     default:
       ws.send(JSON.stringify({ status: "error", error: "Invalid action" }))

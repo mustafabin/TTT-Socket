@@ -67,7 +67,7 @@ class NormalRoom {
     }
     return this.result
   }
-  resetGame(): ResultType {
+  resetGame() {
     // ! if there not a winner or a draw then the game isnt over
     if (!(this.winner !== "" || this.isDraw)) return { ...this.result, status: "error", error: "Game Is Not Over" }
     this.gameState = [
@@ -79,7 +79,7 @@ class NormalRoom {
     this.winner = ""
     this.isDraw = false
     this.result = {
-      status: "update",
+      status: "assign",
       error: "",
       winner: this.winner,
       board: this.gameState,
@@ -87,8 +87,13 @@ class NormalRoom {
       currentTurn: this.currentTurn,
       player: undefined,
     }
-    // todo swap players
-    return this.result
+    //* swaping players and sending the result
+    this.playerConnections.forEach((player, ws) => {
+      let newPlayer: Player = player === "X" ? "O" : "X"
+      this.playerConnections.set(ws, newPlayer)
+      this.result.player = newPlayer
+      ws.send(JSON.stringify(this.result))
+    })
   }
   assignPlayer(ws: ServerWebSocket<any>) {
     if (!ws) {
