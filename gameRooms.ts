@@ -1,13 +1,12 @@
 import { ServerWebSocket } from "bun"
 import { Coords, GameState, Player, ResultType } from "./types"
-
 class NormalRoom {
   private gameState: GameState
   private currentTurn: Player
   private playerConnections: Map<ServerWebSocket<any>, Player>
   private winner: Player | ""
   private isDraw: boolean
-  private result:ResultType
+  private result: ResultType
   constructor() {
     this.gameState = [
       ["", "", ""],
@@ -28,11 +27,11 @@ class NormalRoom {
       player: undefined,
     }
   }
-  private checkDraw () {
+  private checkDraw() {
     this.isDraw = this.gameState.every((row) => row.every((cell) => cell !== ""))
     this.result.isDraw = this.isDraw
   }
-  private checkWinner (currentMove: Coords) {
+  private checkWinner(currentMove: Coords) {
     let [currentRow, currentCol] = currentMove
 
     // check rows and columns
@@ -41,24 +40,26 @@ class NormalRoom {
 
     // check diagonals
     if (currentRow === currentCol && this.gameState.every((row, col) => row[col] === this.currentTurn)) this.winner = this.currentTurn
-    if (currentRow + currentCol === 2 && this.gameState.every((row, col) => row[2 - col] === this.currentTurn)) this.winner = this.currentTurn
+    if (currentRow + currentCol === 2 && this.gameState.every((row, col) => row[2 - col] === this.currentTurn))
+      this.winner = this.currentTurn
 
-    if (this.winner !== "") return this.result.winner = this.winner
+    if (this.winner !== "") return (this.result.winner = this.winner)
     // no winner
     this.currentTurn = this.currentTurn === "X" ? "O" : "X"
     this.checkDraw()
   }
-  playMove (row: number, col: number, ws: ServerWebSocket<any>): ResultType {
-    if (this.winner !== "" || this.isDraw) return {...this.result, status:"error", error:"Game Is Over"}
+  playMove(row: number, col: number, ws: ServerWebSocket<any>): ResultType {
+    if (this.winner !== "" || this.isDraw) return { ...this.result, status: "error", error: "Game Is Over" }
     let player = this.playerConnections.get(ws)
     this.result.player = player
-    if (!(player !== undefined && player === this.currentTurn && this.gameState[row][col] === "")) return {...this.result, status:"error", error:"Invalid Move"}
+    if (!(player !== undefined && player === this.currentTurn && this.gameState[row][col] === ""))
+      return { ...this.result, status: "error", error: "Invalid Move" }
     this.gameState[row][col] = player
     this.checkWinner([row, col])
     this.result.status = "update"
     return this.result
   }
-  getResult (ws: ServerWebSocket<any>) {
+  getResult(ws: ServerWebSocket<any>) {
     this.result = {
       ...this.result,
       status: "assign",
@@ -66,13 +67,28 @@ class NormalRoom {
     }
     return this.result
   }
-  clearBoard () {
+  resetGame(): ResultType {
+    // ! if there not a winner or a draw then the game isnt over
+    if (!(this.winner !== "" || this.isDraw)) return { ...this.result, status: "error", error: "Game Is Not Over" }
     this.gameState = [
       ["", "", ""],
       ["", "", ""],
       ["", "", ""],
     ]
     this.currentTurn = "X"
+    this.winner = ""
+    this.isDraw = false
+    this.result = {
+      status: "update",
+      error: "",
+      winner: this.winner,
+      board: this.gameState,
+      isDraw: this.isDraw,
+      currentTurn: this.currentTurn,
+      player: undefined,
+    }
+    // todo swap players
+    return this.result
   }
   assignPlayer(ws: ServerWebSocket<any>) {
     if (!ws) {
@@ -105,6 +121,5 @@ class NormalRoom {
     this.playerConnections.delete(ws)
   }
 }
-class HardRoom extends NormalRoom{
-}
+class HardRoom extends NormalRoom {}
 export { NormalRoom, HardRoom }

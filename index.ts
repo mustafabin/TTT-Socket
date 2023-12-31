@@ -16,12 +16,16 @@ const server = Bun.serve({
     // ! Main websocket logic
     message(ws: ServerWebSocket<any>, data: string) {
       let roomID = String(ws.data.roomID)
-      let coords = JSON.parse(data)?.coords
-      console.log(`Message received: ${coords} Room: ${roomID}`)
-      let currentRoom = roomManager.getRoom(roomID)
-      if (!currentRoom) return
-      let result = currentRoom.playMove(coords[0], coords[1], ws)
-      publishToRoom(ws, roomID, result)
+      let parsedData = JSON.parse(data)
+      switch (parsedData?.messageType) {
+        case "game":
+          handleGameMessage(ws, roomID, parsedData?.actionType, parsedData)
+          break
+        case "chat":
+          break
+        default:
+          break
+      }
     },
     // ! End of main websocket logic
     close(ws, code, message) {
@@ -46,7 +50,26 @@ const server = Bun.serve({
     },
   },
 })
-
+function handleGameMessage(ws: ServerWebSocket<any>, roomID: string, actionType: string, data:any) {
+  let currentRoom = roomManager.getRoom(roomID)
+  if (!currentRoom) return ws.send(JSON.stringify({ status: "error", error: "Room not found" }))
+  switch (actionType) {
+    case "move":
+      let coords = data?.coords
+      console.log(`Message received: ${coords} Room: ${roomID}`)
+      let moveResult = currentRoom.playMove(coords[0], coords[1], ws)
+      publishToRoom(ws, roomID, moveResult)
+      break
+    case "reset":
+      console.log(`reset requested from room: ${roomID}}`)
+      let resetResult = currentRoom.resetGame()
+      publishToRoom(ws, roomID, resetResult)
+      break
+    default:
+      ws.send(JSON.stringify({ status: "error", error: "Invalid action" }))
+      break
+  }
+}
 function handleRequest(request: Request) {
   const url = new URL(request.url)
   console.log(`Request to ${url.pathname}`)
@@ -71,9 +94,9 @@ function handleRequest(request: Request) {
 }
 function publishToRoom(ws: ServerWebSocket<any>, roomID: string, data: ResultType) {
   let response = JSON.stringify(data)
-  if(data.error){
+  if (data.error) {
     ws.send(response)
-  } else{
+  } else {
     ws.send(response)
     ws.publish(roomID, response)
   }
