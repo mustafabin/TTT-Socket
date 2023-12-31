@@ -11,7 +11,6 @@ RUN bun install --frozen-lockfile
 # Copy the rest of the app
 COPY . .
 
-# Compile TypeScript (if necessary)
 RUN bun run build
 
 # Expose the port your app runs on

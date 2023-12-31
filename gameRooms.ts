@@ -51,8 +51,11 @@ class NormalRoom {
     if (!(player !== undefined && player === this.currentTurn && this.gameState[row][col] === "")) return {...this.result, status:"error", error:"Invalid Move"}
     this.gameState[row][col] = player
     this.checkWinner([row, col])
-    this.result.status = "success"
+    this.result.status = "update"
     return this.result
+  }
+  getResult () {
+    if(this.result.status === "update") return this.result
   }
   clearBoard () {
     this.gameState = [
