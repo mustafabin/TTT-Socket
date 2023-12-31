@@ -36,13 +36,13 @@ const server = Bun.serve({
       let roomID = String(ws.data.roomID)
       // ! connect player to room
       let player = roomManager.assignPlayer(ws, roomID)
-      let currentResult = roomManager.getRoom(roomID)?.getResult()
+      let currentResult = roomManager.getRoom(roomID)?.getResult(ws)
       let response = JSON.stringify({ status: "joined", player })
       ws.subscribe(roomID)
       ws.publish(roomID, response)
       console.log(`Socket opened: ${roomID} - ${player}`)
-      // ! this is to send the current result to the player that just joined
-      if(currentResult?.status === "update") ws.send(JSON.stringify(currentResult))
+      // ! this is to send the current result to the player incase they rejoined
+      ws.send(JSON.stringify(currentResult))
     },
   },
 })
@@ -71,7 +71,12 @@ function handleRequest(request: Request) {
 }
 function publishToRoom(ws: ServerWebSocket<any>, roomID: string, data: ResultType) {
   let response = JSON.stringify(data)
-  data.error ? ws.send(response) : ws.publish(roomID, response)
+  if(data.error){
+    ws.send(response)
+  } else{
+    ws.send(response)
+    ws.publish(roomID, response)
+  }
 }
 function JSONResponse(data: Object, status: number) {
   return new Response(JSON.stringify(data), { status })

@@ -3,7 +3,7 @@ export type GameState = string[][]
 export type HardGameState = string[][][]
 export type Coords = [number, number]
 export type ResultType = {
-  status: "" | "error" | "update" | "chat"
+  status: "" | "error" | "update" | "chat" | "assign"
   error: string
   winner: string
   board: GameState

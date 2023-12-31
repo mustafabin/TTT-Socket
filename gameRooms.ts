@@ -30,6 +30,7 @@ class NormalRoom {
   }
   private checkDraw () {
     this.isDraw = this.gameState.every((row) => row.every((cell) => cell !== ""))
+    this.result.isDraw = this.isDraw
   }
   private checkWinner (currentMove: Coords) {
     let [currentRow, currentCol] = currentMove
@@ -42,20 +43,28 @@ class NormalRoom {
     if (currentRow === currentCol && this.gameState.every((row, col) => row[col] === this.currentTurn)) this.winner = this.currentTurn
     if (currentRow + currentCol === 2 && this.gameState.every((row, col) => row[2 - col] === this.currentTurn)) this.winner = this.currentTurn
 
+    if (this.winner !== "") return this.result.winner = this.winner
     // no winner
     this.currentTurn = this.currentTurn === "X" ? "O" : "X"
     this.checkDraw()
   }
   playMove (row: number, col: number, ws: ServerWebSocket<any>): ResultType {
+    if (this.winner !== "" || this.isDraw) return {...this.result, status:"error", error:"Game Is Over"}
     let player = this.playerConnections.get(ws)
+    this.result.player = player
     if (!(player !== undefined && player === this.currentTurn && this.gameState[row][col] === "")) return {...this.result, status:"error", error:"Invalid Move"}
     this.gameState[row][col] = player
     this.checkWinner([row, col])
     this.result.status = "update"
     return this.result
   }
-  getResult () {
-    if(this.result.status === "update") return this.result
+  getResult (ws: ServerWebSocket<any>) {
+    this.result = {
+      ...this.result,
+      status: "assign",
+      player: this.playerConnections.get(ws),
+    }
+    return this.result
   }
   clearBoard () {
     this.gameState = [
