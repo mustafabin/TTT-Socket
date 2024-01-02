@@ -46,6 +46,7 @@ class NormalRoom {
     if (this.winner !== "") return (this.result.winner = this.winner)
     // no winner
     this.currentTurn = this.currentTurn === "X" ? "O" : "X"
+    this.result.currentTurn = this.currentTurn
     this.checkDraw()
   }
   playMove(row: number, col: number, ws: ServerWebSocket<any>): ResultType {
