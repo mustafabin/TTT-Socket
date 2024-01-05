@@ -1,6 +1,6 @@
 import { ServerWebSocket } from "bun"
 import RoomManager from "./roomManager"
-import { ResultType } from "./types"
+import { ResultType, roomTypes } from "./types"
 const roomManager = new RoomManager()
 const port = 3030
 const server = Bun.serve({
@@ -75,7 +75,8 @@ function handleRequest(request: Request) {
   let roomID: string | boolean
   switch (url.pathname) {
     case "/create":
-      roomID = roomManager.createNewRoom("normal")
+      let roomType = url.searchParams.get("type") || "normal"
+      roomID = roomManager.createNewRoom(roomType as roomTypes)
       if (roomID === false) return JSONResponse({ error: "Couldnt create room" }, 500)
       return JSONResponse({ roomID }, 200)
     case "/join":
