@@ -24,6 +24,7 @@ const server = Bun.serve({
         case "chat":
           break
         default:
+          ws.send(JSON.stringify({ status: "error", error: "Invalid message type" }))
           break
       }
     },
