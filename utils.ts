@@ -1,3 +1,7 @@
+import { ServerWebSocket } from "bun"
+import RoomManager from "./roomManager"
+import { ResultType } from "./types"
+
 const createInitialBoard = () =>
   Array(9)
     .fill(null)
@@ -41,5 +45,48 @@ const checkWinner = (board: Array<Array<string>>, currentMove: Array<number>, pl
   // no winner
   return ""
 }
+function handleGameMessage(ws: ServerWebSocket<any>, roomID: string, actionType: string, data: any, roomManager: RoomManager) {
+  let currentRoom = roomManager.getRoom(roomID)
+  if (!currentRoom) return ws.send(JSON.stringify({ status: "error", error: "Room not found" }))
+  switch (actionType) {
+    case "move":
+      let coords = data?.coords
+      console.log(`Message received: ${coords} Room: ${roomID}`)
+      let moveResult = currentRoom.playMove(coords[0], coords[1], ws)
+      publishToRoom(ws, roomID, moveResult)
+      break
+    case "reset":
+      console.log(`reset requested from room: ${roomID}}`)
+      currentRoom.resetGame()
+      break
+    default:
+      ws.send(JSON.stringify({ status: "error", error: "Invalid action" }))
+      break
+  }
+}
 
-export { createInitialBoard, createInitialBoardStats, checkDraw, convertMapToArray, checkWinner }
+function publishToRoom(ws: ServerWebSocket<any>, roomID: string, data: ResultType) {
+  let response = JSON.stringify(data)
+  if (data.error) {
+    ws.send(response)
+  } else {
+    ws.send(response)
+    ws.publish(roomID, response)
+  }
+}
+function JSONResponse(data: Object, status: number) {
+  const res = new Response(JSON.stringify(data), { status })
+  res.headers.set("Access-Control-Allow-Origin", "*")
+  res.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+  return res
+}
+export {
+  createInitialBoard,
+  createInitialBoardStats,
+  checkDraw,
+  convertMapToArray,
+  checkWinner,
+  handleGameMessage,
+  publishToRoom,
+  JSONResponse,
+}

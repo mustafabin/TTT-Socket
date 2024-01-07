@@ -1,6 +1,7 @@
 import { ServerWebSocket } from "bun"
 import RoomManager from "./roomManager"
-import { ResultType, roomTypes } from "./types"
+import { JSONResponse, handleGameMessage } from "./utils"
+import { roomTypes } from "./types"
 const roomManager = new RoomManager()
 const port = 3030
 const server = Bun.serve({
@@ -19,7 +20,7 @@ const server = Bun.serve({
       let parsedData = JSON.parse(data)
       switch (parsedData?.messageType) {
         case "game":
-          handleGameMessage(ws, roomID, parsedData?.actionType, parsedData)
+          handleGameMessage(ws, roomID, parsedData?.actionType, parsedData, roomManager)
           break
         case "chat":
           break
@@ -51,25 +52,6 @@ const server = Bun.serve({
     },
   },
 })
-function handleGameMessage(ws: ServerWebSocket<any>, roomID: string, actionType: string, data: any) {
-  let currentRoom = roomManager.getRoom(roomID)
-  if (!currentRoom) return ws.send(JSON.stringify({ status: "error", error: "Room not found" }))
-  switch (actionType) {
-    case "move":
-      let coords = data?.coords
-      console.log(`Message received: ${coords} Room: ${roomID}`)
-      let moveResult = currentRoom.playMove(coords[0], coords[1], ws)
-      publishToRoom(ws, roomID, moveResult)
-      break
-    case "reset":
-      console.log(`reset requested from room: ${roomID}}`)
-      currentRoom.resetGame()
-      break
-    default:
-      ws.send(JSON.stringify({ status: "error", error: "Invalid action" }))
-      break
-  }
-}
 function handleRequest(request: Request) {
   const url = new URL(request.url)
   console.log(`Request to ${url.pathname}`)
@@ -94,20 +76,5 @@ function handleRequest(request: Request) {
     default:
       return JSONResponse({ error: "Invalid path" }, 404)
   }
-}
-function publishToRoom(ws: ServerWebSocket<any>, roomID: string, data: ResultType) {
-  let response = JSON.stringify(data)
-  if (data.error) {
-    ws.send(response)
-  } else {
-    ws.send(response)
-    ws.publish(roomID, response)
-  }
-}
-function JSONResponse(data: Object, status: number) {
-  const res = new Response(JSON.stringify(data), { status })
-  res.headers.set("Access-Control-Allow-Origin", "*")
-  res.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-  return res
 }
 console.log(`Listenin on localhost:${server.port}`)
