@@ -11,7 +11,7 @@ const createInitialBoard = () =>
         .map(() => Array(3).fill(""))
     )
 
-const createInitialBoardStats = () => {
+const createInitialBoardStats = (): Map<number, { winner: string; draw: boolean }> => {
   const stats = new Map()
   for (let i = 0; i < 9; i++) {
     stats.set(i, { winner: "", draw: false })

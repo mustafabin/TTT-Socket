@@ -1,6 +1,6 @@
 import { ServerWebSocket } from "bun"
 import { Coords, GameState, HardGameState, Player, ResultType } from "./types"
-import { createInitialBoard } from "./utils"
+import { createInitialBoard, createInitialBoardStats } from "./utils"
 class NormalRoom {
   private gameState: GameState
   private currentTurn: Player
@@ -135,12 +135,16 @@ class HardRoom {
   private winner: Player | ""
   private isDraw: boolean
   private result: ResultType
+  private focusedGrid:number
+  private gameBoardStats: Map<number, { winner: string; draw: boolean }>
   constructor() {
     this.gameState = createInitialBoard()
     this.currentTurn = "X"
     this.playerConnections = new Map()
     this.winner = ""
     this.isDraw = false
+    this.focusedGrid = -1
+    this.gameBoardStats = createInitialBoardStats()
     this.result = {
       status: "",
       error: "",
@@ -148,6 +152,8 @@ class HardRoom {
       board: this.gameState,
       isDraw: this.isDraw,
       currentTurn: this.currentTurn,
+      focusedGrid: this.focusedGrid,
+      gameBoardStatsArray: Array.from(this.gameBoardStats.entries()),
       player: undefined,
     }
   }
@@ -163,6 +169,8 @@ class HardRoom {
     this.gameState[gridIndex][row][col] = player
     // check winner
     this.result.status = "update"
+    this.currentTurn = this.currentTurn === "X" ? "O" : "X"
+    this.result.currentTurn = this.currentTurn
     return this.result
   }
   getResult(ws: ServerWebSocket<any>) {
