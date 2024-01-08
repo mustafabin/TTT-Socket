@@ -52,7 +52,7 @@ function handleGameMessage(ws: ServerWebSocket<any>, roomID: string, actionType:
     case "move":
       let coords = data?.coords
       console.log(`Message received: ${coords} Room: ${roomID}`)
-      let moveResult = currentRoom.playMove(coords[0], coords[1], ws)
+      let moveResult = currentRoom.playMove(coords[0], coords[1], ws, data?.gridIndex)
       publishToRoom(ws, roomID, moveResult)
       break
     case "reset":

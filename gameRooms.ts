@@ -153,12 +153,27 @@ class HardRoom {
   }
 
   playMove(row: number, col: number, ws: ServerWebSocket<any>, gridIndex: number = -1): ResultType {
+    if (this.winner !== "" || this.isDraw) return { ...this.result, status: "error", error: "Game Is Over" }
+    let player = this.playerConnections.get(ws)
+    this.result.player = player
+    // ! more chhecks for hard mode
+    if (!(player !== undefined && player === this.currentTurn && this.gameState[gridIndex][row][col] === ""))
+      return { ...this.result, status: "error", error: "Invalid Move" }
+
+    this.gameState[gridIndex][row][col] = player
+    // check winner
+    this.result.status = "update"
     return this.result
   }
-  getResult(){
+  getResult(ws: ServerWebSocket<any>) {
+    this.result = {
+      ...this.result,
+      status: "assign",
+      player: this.playerConnections.get(ws),
+    }
     return this.result
   }
-  resetGame(){
+  resetGame() {
     if (!(this.winner !== "" || this.isDraw)) return { ...this.result, status: "error", error: "Game Is Not Over" }
     this.gameState = createInitialBoard()
     this.currentTurn = "X"
