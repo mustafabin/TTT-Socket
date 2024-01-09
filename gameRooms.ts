@@ -202,6 +202,7 @@ class HardRoom {
         this.result.isDraw = this.isDraw
       }
     }
+    this.result.gameBoardStatsArray = Array.from(this.gameBoardStats.entries())
     let nextFocus = row * 3 + col
     this.activeGrid = this.gameBoardStats.get(nextFocus)?.winner !== "" || this.gameBoardStats.get(nextFocus)?.draw ? -1 : nextFocus
     this.result.activeGrid = this.activeGrid
