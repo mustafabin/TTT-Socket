@@ -1,6 +1,6 @@
 import { ServerWebSocket } from "bun"
 import { Coords, GameState, HardGameState, Player, ResultType } from "./types"
-import { createInitialBoard, createInitialBoardStats } from "./utils"
+import { checkDraw, checkWinner, convertMapToArray, createInitialBoard, createInitialBoardStats } from "./utils"
 class NormalRoom {
   private gameState: GameState
   private currentTurn: Player
@@ -132,10 +132,10 @@ class HardRoom {
   private gameState: HardGameState
   private currentTurn: Player
   private playerConnections: Map<ServerWebSocket<any>, Player>
-  private winner: Player | ""
+  private winner: Player | string
   private isDraw: boolean
   private result: ResultType
-  private focusedGrid:number
+  private activeGrid: number
   private gameBoardStats: Map<number, { winner: string; draw: boolean }>
   constructor() {
     this.gameState = createInitialBoard()
@@ -143,7 +143,7 @@ class HardRoom {
     this.playerConnections = new Map()
     this.winner = ""
     this.isDraw = false
-    this.focusedGrid = -1
+    this.activeGrid = -1
     this.gameBoardStats = createInitialBoardStats()
     this.result = {
       status: "",
@@ -152,7 +152,7 @@ class HardRoom {
       board: this.gameState,
       isDraw: this.isDraw,
       currentTurn: this.currentTurn,
-      focusedGrid: this.focusedGrid,
+      activeGrid: this.activeGrid,
       gameBoardStatsArray: Array.from(this.gameBoardStats.entries()),
       player: undefined,
     }
@@ -162,8 +162,21 @@ class HardRoom {
     if (this.winner !== "" || this.isDraw) return { ...this.result, status: "error", error: "Game Is Over" }
     let player = this.playerConnections.get(ws)
     this.result.player = player
-    // ! more chhecks for hard mode
-    if (!(player !== undefined && player === this.currentTurn && this.gameState[gridIndex][row][col] === ""))
+    // ? CHECKS: if any of these conditions fail then the move is invalid
+    // * Player must be valid and it must be their turn
+    // * Cell must be empty
+    // * Active grid must be the grid they are playing in or if active grid is -1 then they can play in any grid
+    // * Current grid they are playing in must not already have winner or be a draw
+    if (
+      !(
+        player !== undefined &&
+        player === this.currentTurn &&
+        this.gameState[gridIndex][row][col] === "" &&
+        (this.activeGrid === gridIndex || this.activeGrid === -1) &&
+        this.gameBoardStats.get(gridIndex)?.winner === "" &&
+        this.gameBoardStats.get(gridIndex)?.draw === false
+      )
+    )
       return { ...this.result, status: "error", error: "Invalid Move" }
 
     this.gameState[gridIndex][row][col] = player
@@ -171,6 +184,27 @@ class HardRoom {
     this.result.status = "update"
     this.currentTurn = this.currentTurn === "X" ? "O" : "X"
     this.result.currentTurn = this.currentTurn
+
+    let microWinner = checkWinner(this.gameState[gridIndex], [row, col], player)
+    if(microWinner){
+      this.gameBoardStats.set(gridIndex, { winner: microWinner, draw: false })
+      let macroBoard = convertMapToArray(this.gameBoardStats)
+      let macroWinner = checkWinner(macroBoard, [Math.floor(gridIndex / 3), gridIndex % 3], player)
+      if(macroWinner){
+        this.winner = macroWinner
+        this.result.winner = this.winner
+      }
+    }else if(checkDraw(this.gameState[gridIndex])){
+      this.gameBoardStats.set(gridIndex, { winner: "", draw: true })
+      let macroBoard = convertMapToArray(this.gameBoardStats)
+      if(checkDraw(macroBoard)){
+        this.isDraw = true
+        this.result.isDraw = this.isDraw
+      }
+    }
+    let nextFocus = row * 3 + col
+    this.activeGrid = this.gameBoardStats.get(nextFocus)?.winner !== "" || this.gameBoardStats.get(nextFocus)?.draw ? -1 : nextFocus
+    this.result.activeGrid = this.activeGrid
     return this.result
   }
   getResult(ws: ServerWebSocket<any>) {
@@ -211,7 +245,6 @@ class HardRoom {
     }
     let isPlayerXAssigned = false
     let isPlayerOAssigned = false
-
     for (let [_, player] of this.playerConnections) {
       if (player === "X") isPlayerXAssigned = true
       else if (player === "O") isPlayerOAssigned = true
@@ -219,7 +252,6 @@ class HardRoom {
       // if both players are assigned break
       if (isPlayerXAssigned && isPlayerOAssigned) break
     }
-
     if (!isPlayerXAssigned) {
       this.playerConnections.set(ws, "X")
       return "X"

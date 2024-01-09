@@ -18,5 +18,6 @@ export type ResultType = {
       draw: boolean
     }
   ][]
+  activeGrid?: number
 }
 export type roomTypes = "normal" | "hard"
